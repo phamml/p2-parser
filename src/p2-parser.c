@@ -141,10 +141,36 @@ void parse_id (TokenQueue* input, char* buffer)
  * node-level parsing functions
  */
 
+// make sure to check that input is not NULL
+
+ASTNode* parse_vardecl (TokenQueue* input)
+{
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Variable declaration expected but not found at line 1\n");
+    }
+    // VarDecl -> ID
+    // need to check that token type is ID
+    ASTNode* n = NULL;
+    Token* t = TokenQueue_remove(input);
+    if (t->type == ID) {
+        n = VarDeclNode_new(t->text, INT, false, 0, t->line);
+    } else {
+        Error_throw_printf("Variable declaration expected but '%s' found at line %d\n", t->text, t->line);
+    }
+    return n;
+}
+
 ASTNode* parse_program (TokenQueue* input)
 {
     NodeList* vars = NodeList_new();
     NodeList* funcs = NodeList_new();
+
+    // Program -> VarDecl
+    // Call parse_vardecl
+    while (!TokenQueue_is_empty(input)) {
+        NodeList_add(vars, parse_vardecl(input));
+    }
+
 
     return ProgramNode_new(vars, funcs);
 }
