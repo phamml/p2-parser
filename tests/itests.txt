@@ -1,0 +1,7 @@
+A_sourceinfo                   FAIL (see outputs/A_sourceinfo.diff for details)
+Memory leak(s) found. See files listed below for details.
+  - ==2081764==    definitely lost
+========================================
+ NOTICE: THIS TESTSUITE IS INCOMPLETE.
+YOU WILL BE GRADED ON OTHER TEST CASES.
+        WRITE YOUR OWN TESTS!

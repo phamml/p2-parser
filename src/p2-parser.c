@@ -94,6 +94,10 @@ bool check_next_token (TokenQueue* input, TokenType type, const char* text)
     return (token->type == type) && (token_str_eq(token->text, text));
 }
 
+/*
+ * node-level parsing functions
+ */
+
 /**
  * @brief Parse and return a Decaf type
  * 
@@ -102,6 +106,10 @@ bool check_next_token (TokenQueue* input, TokenType type, const char* text)
  */
 DecafType parse_type (TokenQueue* input)
 {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Variable declaration expected but not found at line 1\n");
+    }
+
     Token* token = TokenQueue_remove(input);
     if (token->type != KEY) {
         Error_throw_printf("Invalid type '%s' on line %d\n", token->text, get_next_token_line(input));
@@ -137,40 +145,176 @@ void parse_id (TokenQueue* input, char* buffer)
     Token_free(token);
 }
 
-/*
- * node-level parsing functions
- */
-
-// make sure to check that input is not NULL
-
-ASTNode* parse_vardecl (TokenQueue* input)
+ASTNode* parse_vardecl(TokenQueue* input)
 {
+    // check if empty
     if (TokenQueue_is_empty(input)) {
         Error_throw_printf("Variable declaration expected but not found at line 1\n");
     }
-    // VarDecl -> ID
-    // need to check that token type is ID
-    ASTNode* n = NULL;
-    Token* t = TokenQueue_remove(input);
-    if (t->type == ID) {
-        n = VarDeclNode_new(t->text, INT, false, 0, t->line);
-    } else {
-        Error_throw_printf("Variable declaration expected but '%s' found at line %d\n", t->text, t->line);
-    }
+    
+    int line = get_next_token_line(input);
+    DecafType type = parse_type(input);
+
+    char* buffer = malloc (MAX_TOKEN_LEN);
+    parse_id(input, buffer);
+    match_and_discard_next_token(input, SYM, ";");
+
+    ASTNode* n = VarDeclNode_new(buffer, type, false, 0, line);
     return n;
 }
 
+ParameterList* parse_params(TokenQueue* input) {
+    // check if empty
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Parameter expected but not found at line 1\n");
+    }
+
+    match_and_discard_next_token(input, SYM, "(");
+    ParameterList* params = ParameterList_new();
+
+    // if next token is ")" then param list is empty just return
+    if (token_str_eq(TokenQueue_peek(input)->text, ")")) {
+        match_and_discard_next_token(input, SYM, ")");
+        return params;
+    } else {
+        // parse first param
+        DecafType type = parse_type(input);
+        char* buffer = malloc (MAX_TOKEN_LEN);
+        parse_id(input, buffer);
+        ParameterList_add_new(params, buffer, type);
+
+        // if next token is "," then more params present -> keep parsing
+        // and adding to param list until ")" is seen
+        if (!token_str_eq(TokenQueue_peek(input)->text, ",")) {
+            while (!token_str_eq(TokenQueue_peek(input)->text, ")")) {
+                match_and_discard_next_token(input, SYM, ",");
+                type = parse_type(input);
+                buffer = malloc (MAX_TOKEN_LEN);
+                parse_id(input, buffer);
+                ParameterList_add_new(params, buffer, type);
+            }
+        }
+    }
+    match_and_discard_next_token(input, SYM, ")");
+    return params;
+}
+
+ASTNode* parse_statement(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Statement expected but not found at line 1\n");
+    }
+
+    // get line number of statement
+    int line = get_next_token_line(input);
+
+    ASTNode* n = NULL;
+    // check what kind of statement and return appropriate statement node
+    if (token_str_eq(TokenQueue_peek(input)->text, "break")) {
+        TokenQueue_remove(input);
+        n = BreakNode_new(line);
+    } else if (token_str_eq(TokenQueue_peek(input)->text, "continue")) {
+        TokenQueue_remove(input);
+        n = ContinueNode_new(line);
+    } else if (token_str_eq(TokenQueue_peek(input)->text, "return")) {
+        // get val from calling parse_expr
+        ASTNode* val = NULL;
+        TokenQueue_remove(input);
+        n = ReturnNode_new(val, line);
+    }
+    match_and_discard_next_token(input, SYM, ";");
+    return n;
+}
+
+ASTNode* parse_block(TokenQueue* input) {
+    // check if empty
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Block expected but not found at line 1\n");
+    }
+
+    // get line number of block
+    int line = get_next_token_line(input);
+
+    match_and_discard_next_token(input, SYM, "{");
+    NodeList* vars = NodeList_new();
+    NodeList* stmnts = NodeList_new();
+    ASTNode* var = NULL;
+    ASTNode* stmnt = NULL;
+
+    // if next toke is "}" then func body is empty just return
+    if (token_str_eq(TokenQueue_peek(input)->text, "}")) {
+        match_and_discard_next_token(input, SYM, "}");
+        return BlockNode_new(vars, stmnts, line);
+    } else {
+        // parse func body until another "}" is seen
+        while (!token_str_eq(TokenQueue_peek(input)->text, "}")) {
+            // if line of body starts with Type then parse VarDecl
+            if (token_str_eq(TokenQueue_peek(input)->text, "int")
+                    || token_str_eq(TokenQueue_peek(input)->text, "bool")
+                    || token_str_eq(TokenQueue_peek(input)->text, "void")) {
+                var = parse_vardecl(input);
+                NodeList_add(vars, var);
+            // else parse statements
+            } else {
+                stmnt = parse_statement(input);
+                NodeList_add(stmnts, stmnt);
+            }
+        }
+    }
+
+    match_and_discard_next_token(input, SYM, "}");
+    ASTNode* n = BlockNode_new(vars, stmnts, line);
+    return n;
+}
+
+// All functions will start with def keyword
+ASTNode* parse_funcdecl(TokenQueue* input) {
+    // check if empty
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Function declaration expected but not found at line 1\n");
+    }
+
+    // get line number of func decl
+    int line = get_next_token_line(input);
+
+    // get return type of func decl
+    match_and_discard_next_token(input, KEY, "def");
+    DecafType type = parse_type(input);
+    printf("%d\n", type);
+
+    // get func name
+    char* buffer = malloc (MAX_TOKEN_LEN);
+    parse_id(input, buffer);
+    printf("%s\n", buffer);
+
+    // get params and body of func and create new funcdecl node
+    ParameterList* params = parse_params(input);
+    ASTNode* body = parse_block(input);
+    ASTNode* n = FuncDeclNode_new(buffer, type, params, body, line);
+    return n;
+}
+
+// Parses the program non terminal
 ASTNode* parse_program (TokenQueue* input)
 {
     NodeList* vars = NodeList_new();
     NodeList* funcs = NodeList_new();
 
     // Program -> VarDecl
-    // Call parse_vardecl
+    // VarDecl -> ID
     while (!TokenQueue_is_empty(input)) {
-        NodeList_add(vars, parse_vardecl(input));
+        // Peeks at first token in input to determine whether to parse
+        // VarDecl or FuncDecl
+        Token* token = TokenQueue_peek(input);
+        ASTNode* n = NULL;
+        if (token_str_eq(token->text, "def")) {
+            n = parse_funcdecl(input);
+            NodeList_add(funcs, n);
+        } else {
+            n = parse_vardecl(input);
+            // we want to add this to vars since it is a vars node
+            NodeList_add(vars, n);
+        }
     }
-
 
     return ProgramNode_new(vars, funcs);
 }
