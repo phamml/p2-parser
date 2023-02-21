@@ -3,14 +3,19 @@ Running suite(s): Default
 foo
 1
 main
+here2
 1
 main
+here2
 1
 main
+here2
 1
 main
+here2
 1
 main
+here2
 53%: Checks: 30, Failures: 9, Errors: 5
 public.c:47:F:Public:C_assign:0: Assertion 'valid_program("def int main () { " "int a; a = 5;" " }")' failed
 public.c:51:F:Public:C_return_val:0: Assertion 'valid_program("def int main () { " "return 0;" " }")' failed

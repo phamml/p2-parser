@@ -1,1 +1,1 @@
-def int main () { return; }
+def void foo() { return; }

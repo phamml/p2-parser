@@ -173,7 +173,7 @@ ParameterList* parse_params(TokenQueue* input) {
     ParameterList* params = ParameterList_new();
 
     // if next token is ")" then param list is empty just return
-    if (token_str_eq(TokenQueue_peek(input)->text, ")")) {
+    if (check_next_token_type(input, SYM)) {
         match_and_discard_next_token(input, SYM, ")");
         return params;
     } else {
@@ -185,8 +185,8 @@ ParameterList* parse_params(TokenQueue* input) {
 
         // if next token is "," then more params present -> keep parsing
         // and adding to param list until ")" is seen
-        if (!token_str_eq(TokenQueue_peek(input)->text, ",")) {
-            while (!token_str_eq(TokenQueue_peek(input)->text, ")")) {
+        if (!check_next_token_type(input, SYM)) {
+            while (!check_next_token_type(input, SYM)) {
                 match_and_discard_next_token(input, SYM, ",");
                 type = parse_type(input);
                 buffer = malloc (MAX_TOKEN_LEN);
@@ -199,6 +199,182 @@ ParameterList* parse_params(TokenQueue* input) {
     return params;
 }
 
+ASTNode* parse_lit(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Literal expected but not found at line 1\n");
+    }
+
+    // get line number of literal
+    int line = get_next_token_line(input);
+
+    // check if next token type is DECLIT, HEXLIT, KEY, or STRLIT 
+    // and return corresponsing node
+    ASTNode* n = NULL;
+
+    return n;
+}
+
+// ASTNode* parse_base_expr(TokenQueue* input) {
+//     if (TokenQueue_is_empty(input)) {
+//         Error_throw_printf("Base expression expected but not found at line 1\n");
+//     }
+
+//     // get line number of base expression
+//     int line = get_next_token_line(input);
+
+//     // if next token is "(" then there is another expr and should parse expr
+//     if (check_next_token(input, SYM, "(")) {
+
+//     // if next token is ID then parse next token as location   
+//     } else if (check_next_token_type(input, ID)) {
+
+//     // if next token is KEY then parse next token as FuncCall
+//     } else if (check_next_token_type(input, KEY)) {
+
+//     // otherwise parse next token as literal
+//     } else {
+//         ASTNode* lit = parse_lit(input);
+//     }
+// }
+
+// Pick up parsing expression here
+ASTNode* parse_neq(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("OR Expression expected but not found at line 1\n");
+    }
+
+    // get line number of expression
+    int line = get_next_token_line(input);
+
+    /*
+     * EQ -> NEQ EQ'
+     */
+    ASTNode* root = NULL;
+
+    return root;
+}
+
+ASTNode* parse_eq(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("OR Expression expected but not found at line 1\n");
+    }
+
+    // get line number of expression
+    int line = get_next_token_line(input);
+
+    /*
+     * EQ -> NEQ EQ'
+     */
+    ASTNode* root = parse_neq(input);
+
+    /*
+     * EQ' -> != NEQ EQ'
+     *     | e
+     */
+    while (check_next_token(input, SYM, "!=")) {
+        ASTNode* new_root = BinaryOpNode_new(EQOP, root, parse_neq(input), line);
+        match_and_discard_next_token(input, SYM, "!=");
+        root = new_root;
+    }
+    return root;
+}
+
+ASTNode* parse_and(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("OR Expression expected but not found at line 1\n");
+    }
+
+    // get line number of expression
+    int line = get_next_token_line(input);
+
+    /*
+     * AND -> EQ AND'
+     */
+    ASTNode* root = parse_eq(input);
+
+    /*
+     * AND' -> == EQ END'
+     *     | e
+     */
+    while (check_next_token(input, SYM, "==")) {
+        ASTNode* new_root = BinaryOpNode_new(EQOP, root, parse_eq(input), line);
+        match_and_discard_next_token(input, SYM, "==");
+        root = new_root;
+    }
+    return root;
+}
+
+ASTNode* parse_or(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("OR Expression expected but not found at line 1\n");
+    }
+
+    // get line number of expression
+    int line = get_next_token_line(input);
+
+    /*
+     * OR -> AND OR'
+     */
+    ASTNode* root = parse_and(input);
+
+    /*
+     * OR' -> && AND OR'
+     *     | e
+     */
+    while (check_next_token(input, SYM, "&&")) {
+        ASTNode* new_root = BinaryOpNode_new(ANDOP, root, parse_and(input), line);
+        match_and_discard_next_token(input, SYM, "&&");
+        root = new_root;
+    }
+    return root;
+}
+
+ASTNode* parse_expr(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Expression expected but not found at line 1\n");
+    }
+
+    // get line number of expression
+    int line = get_next_token_line(input);
+
+    /*
+     * E -> OR E'
+     */
+    ASTNode* root = parse_or(input);
+
+    /*
+     * E' -> || OR E'
+     *     | e
+     */
+    while (check_next_token(input, SYM, "||")) {
+        ASTNode* new_root = BinaryOpNode_new(OROP, root, parse_or(input), line);
+        match_and_discard_next_token(input, SYM, "||");
+        root = new_root;
+    }
+    return root;
+}
+
+ASTNode* parse_loc(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Location expected but not found at line 1\n");
+    }
+
+    // get line number of location
+    int line = get_next_token_line(input);
+
+    // get name of location
+    char* buffer = malloc (MAX_TOKEN_LEN);
+    parse_id(input, buffer);
+    ASTNode* n = NULL;
+
+    // if next token is '=' then is it not array loc
+    if (check_next_token(input, SYM, "=")) {
+        n = LocationNode_new(buffer, NULL, line);
+    }
+
+    return n;
+}
+
 ASTNode* parse_statement(TokenQueue* input) {
     if (TokenQueue_is_empty(input)) {
         Error_throw_printf("Statement expected but not found at line 1\n");
@@ -209,18 +385,34 @@ ASTNode* parse_statement(TokenQueue* input) {
 
     ASTNode* n = NULL;
     // check what kind of statement and return appropriate statement node
-    if (token_str_eq(TokenQueue_peek(input)->text, "break")) {
+    if (check_next_token(input, KEY, "break")) {
         TokenQueue_remove(input);
         n = BreakNode_new(line);
-    } else if (token_str_eq(TokenQueue_peek(input)->text, "continue")) {
+    } else if (check_next_token(input, KEY, "continue")) {
         TokenQueue_remove(input);
         n = ContinueNode_new(line);
-    } else if (token_str_eq(TokenQueue_peek(input)->text, "return")) {
+    } else if (check_next_token(input, KEY, "return")) {
         // get val from calling parse_expr
         ASTNode* val = NULL;
         TokenQueue_remove(input);
+        // if ";" is not next token then parse return val
+        if (!check_next_token_type(input, SYM)) {
+            val = parse_expr(input);
+        }
         n = ReturnNode_new(val, line);
+    } else if (check_next_token(input, KEY, "while")) {
+    
+    } else if (check_next_token(input, KEY, "if")) {
+    
+    } else if (check_next_token(input, KEY, "def")) {
+
+    } else {
+        printf("here3\n");
+        ASTNode* loc = parse_loc(input);
+        match_and_discard_next_token(input, SYM, "=");
+        ASTNode* value = parse_expr(input);
     }
+
     match_and_discard_next_token(input, SYM, ";");
     return n;
 }
@@ -241,20 +433,21 @@ ASTNode* parse_block(TokenQueue* input) {
     ASTNode* stmnt = NULL;
 
     // if next toke is "}" then func body is empty just return
-    if (token_str_eq(TokenQueue_peek(input)->text, "}")) {
+    if (check_next_token(input, SYM, "}")) {
         match_and_discard_next_token(input, SYM, "}");
         return BlockNode_new(vars, stmnts, line);
     } else {
         // parse func body until another "}" is seen
-        while (!token_str_eq(TokenQueue_peek(input)->text, "}")) {
+        while (!check_next_token(input, SYM, "}")) {
             // if line of body starts with Type then parse VarDecl
-            if (token_str_eq(TokenQueue_peek(input)->text, "int")
-                    || token_str_eq(TokenQueue_peek(input)->text, "bool")
-                    || token_str_eq(TokenQueue_peek(input)->text, "void")) {
+            if (check_next_token(input, KEY, "int") || check_next_token(input, KEY, "bool")
+                            || check_next_token(input, KEY, "void") ) {
+                printf("here\n");
                 var = parse_vardecl(input);
                 NodeList_add(vars, var);
             // else parse statements
             } else {
+                printf("here2\n");
                 stmnt = parse_statement(input);
                 NodeList_add(stmnts, stmnt);
             }
@@ -302,11 +495,10 @@ ASTNode* parse_program (TokenQueue* input)
     // Program -> VarDecl
     // VarDecl -> ID
     while (!TokenQueue_is_empty(input)) {
-        // Peeks at first token in input to determine whether to parse
+        // checks token in input to determine whether to parse
         // VarDecl or FuncDecl
-        Token* token = TokenQueue_peek(input);
         ASTNode* n = NULL;
-        if (token_str_eq(token->text, "def")) {
+        if (check_next_token(input, KEY, "def")) {
             n = parse_funcdecl(input);
             NodeList_add(funcs, n);
         } else {

@@ -1,0 +1,43 @@
+E -> OR E'
+E' -> || OR E'
+
+OR -> AND OR'
+OR' -> && AND OR'
+
+AND -> EQ AND'
+AND' -> == EQ AND'
+
+EQ -> NEQ EQ'
+EQ' -> != NEQ EQ'
+
+NEQ -> LT NEQ'
+NEQ' -> < LT NEQ'
+
+LT -> LE LT'
+LT' -> <= LE LT'
+
+LE -> GE LE'
+LE' -> >= GE LE'
+
+GE -> GT GE'
+GE' -> > GT GE'
+
+GT -> ADD GT'
+GT' -> + ADD GT'
+
+ADD -> SUB ADD'
+ADD' -> - SUB ADD'
+
+SUB -> MUL SUB'
+SUB' -> * MUL SUB'
+
+MUL -> DIV MUL'
+MUL' -> / DIV MUL'
+
+DIV -> MOD DIV'
+DIV' -> % MOD DIV'
+
+MOD -> NEG MOD'
+MOD' -> ~ NEG MOD'
+
+

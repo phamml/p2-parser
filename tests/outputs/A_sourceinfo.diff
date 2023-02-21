@@ -1,8 +1,11 @@
---- outputs/A_sourceinfo.txt	2023-02-20 18:54:29.297137313 -0500
+--- outputs/A_sourceinfo.txt	2023-02-21 18:17:41.181154132 -0500
 +++ expected/A_sourceinfo.txt	2023-02-15 13:08:40.285455199 -0500
-@@ -1,2 +1,11 @@
+@@ -1,5 +1,11 @@
 -1
 -main
+-here
+-here2
+-here3
 +Program [line 1]
 +  FuncDecl name="main" return_type=int parameters={} [line 1]
 +    Block [line 2]

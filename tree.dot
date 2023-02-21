@@ -2,7 +2,7 @@ digraph AST {
 3 [shape=box, label="Return"];
 2 [shape=box, label="Block"];
 2 -> 3;
-1 [shape=box, label="FuncDecl name='main'"];
+1 [shape=box, label="FuncDecl name='foo'"];
 1 -> 2;
 0 [shape=box, label="Program"];
 0 -> 1;
