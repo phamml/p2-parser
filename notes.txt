@@ -1,0 +1,70 @@
+    // A level implementation
+    // // get line number of expression
+    // int line = get_next_token_line(input);
+
+    // /*
+    //  * E -> OR E'
+    //  */
+    // ASTNode* root = parse_or(input);
+
+    // /*
+    //  * E' -> || OR E'
+    //  *     | e
+    //  */
+    // while (check_next_token(input, SYM, "||")) {
+    //     ASTNode* new_root = BinaryOpNode_new(OROP, root, parse_or(input), line);
+    //     match_and_discard_next_token(input, SYM, "||");
+    //     root = new_root;
+    // }
+
+
+
+    ASTNode* parse_and(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("OR Expression expected but not found at line 1\n");
+    }
+
+    // get line number of expression
+    int line = get_next_token_line(input);
+
+    /*
+     * AND -> EQ AND'
+     */
+    ASTNode* root = parse_eq(input);
+
+    /*
+     * AND' -> == EQ END'
+     *     | e
+     */
+    while (check_next_token(input, SYM, "==")) {
+        ASTNode* new_root = BinaryOpNode_new(EQOP, root, parse_eq(input), line);
+        match_and_discard_next_token(input, SYM, "==");
+        root = new_root;
+    }
+    return root;
+}
+
+ASTNode* parse_or(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("OR Expression expected but not found at line 1\n");
+    }
+
+    // get line number of expression
+    int line = get_next_token_line(input);
+
+    /*
+     * OR -> AND OR'
+     */
+    ASTNode* root = parse_and(input);
+
+    /*
+     * OR' -> && AND OR'
+     *     | e
+     */
+    while (check_next_token(input, SYM, "&&")) {
+        ASTNode* new_root = BinaryOpNode_new(ANDOP, root, parse_and(input), line);
+        match_and_discard_next_token(input, SYM, "&&");
+        root = new_root;
+    }
+    return root;
+}

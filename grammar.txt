@@ -1,43 +1,42 @@
 E -> OR E'
 E' -> || OR E'
+    | e
 
 OR -> AND OR'
 OR' -> && AND OR'
+     | e
 
 AND -> EQ AND'
 AND' -> == EQ AND'
+      | != EQ AND'
+      | e
 
-EQ -> NEQ EQ'
-EQ' -> != NEQ EQ'
+EQ -> REL EQ'
+EQ' -> < REL EQ'
+     | <= REL EQ'
+     | > REL EQ'
+     | >= REL EQ'
+     | e
 
-NEQ -> LT NEQ'
-NEQ' -> < LT NEQ'
 
-LT -> LE LT'
-LT' -> <= LE LT'
+REL -> ARITH REL'
+REL' -> + ARITH REL'
+      | - ARITH REL'
+      | e
 
-LE -> GE LE'
-LE' -> >= GE LE'
+ARITH -> MUL ARITH'
+ARITH' -> * MUL ARITH'
+        | / MUL ARITH'
+        | % MUL ARITH'
+        | e
 
-GE -> GT GE'
-GE' -> > GT GE'
+MUL -> UNI MUL'
+MUL' -> ! UNI MUL'
+      | - UNI MUL'
+      | e
 
-GT -> ADD GT'
-GT' -> + ADD GT'
-
-ADD -> SUB ADD'
-ADD' -> - SUB ADD'
-
-SUB -> MUL SUB'
-SUB' -> * MUL SUB'
-
-MUL -> DIV MUL'
-MUL' -> / DIV MUL'
-
-DIV -> MOD DIV'
-DIV' -> % MOD DIV'
-
-MOD -> NEG MOD'
-MOD' -> ~ NEG MOD'
-
+UNI -> (E)
+     | Loc 
+     | FuncCall
+     | Lit
 
