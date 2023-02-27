@@ -95,8 +95,11 @@ bool check_next_token (TokenQueue* input, TokenType type, const char* text)
 }
 
 /*
- * node-level parsing functions
+ * NODE-LEVEL PARSING FUNCTIONS
  */
+
+// Prototype required because of mutual recursion
+ASTNode* parse_loc(TokenQueue* input);
 
 /**
  * @brief Parse and return a Decaf type
@@ -137,6 +140,10 @@ DecafType parse_type (TokenQueue* input)
  */
 void parse_id (TokenQueue* input, char* buffer)
 {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("ID expected but not found at line 1\n");
+    }
+
     Token* token = TokenQueue_remove(input);
     if (token->type != ID) {
         Error_throw_printf("Invalid ID '%s' on line %d\n", token->text, get_next_token_line(input));
@@ -157,9 +164,20 @@ ASTNode* parse_vardecl(TokenQueue* input)
 
     char* buffer = malloc (MAX_TOKEN_LEN);
     parse_id(input, buffer);
-    match_and_discard_next_token(input, SYM, ";");
 
-    ASTNode* n = VarDeclNode_new(buffer, type, false, 0, line);
+    ASTNode* n = NULL;
+    // if next token is symbol -> VarDecl is an array assignment
+    if (check_next_token(input, SYM, "[")) {
+        match_and_discard_next_token(input, SYM, "[");
+        Token* token = TokenQueue_remove(input);
+        // convert dec string to int
+        int length = (int) strtol(token->text, NULL, 10);
+        n = VarDeclNode_new(buffer, type, true, length, line);
+        match_and_discard_next_token(input, SYM, "]");
+    } else {
+        n = VarDeclNode_new(buffer, type, false, 0, line);
+    }
+    match_and_discard_next_token(input, SYM, ";");
     return n;
 }
 
@@ -226,8 +244,10 @@ ASTNode* parse_lit(TokenQueue* input) {
     } else if (check_next_token_type(input, KEY)) {
         if (check_next_token(input, KEY, "true")) {
             n = LiteralNode_new_bool(true, line);
+            TokenQueue_remove(input);
         } else {
             n = LiteralNode_new_bool(false, line);
+            TokenQueue_remove(input);
         }
 
     } else {
@@ -235,6 +255,14 @@ ASTNode* parse_lit(TokenQueue* input) {
         // remove surrounding quotes from string lit
         char *p = token->text + 1;
         p[strlen(p)-1] = 0;
+        // fix newline if '\n' present in string
+        char* p2 = strchr( p, '\\');
+        if (p2) {
+            p[p2 - p] = '\0';
+            p2 = p2 + 2;
+            strncat(p, "\n", 3);
+            strncat(p, p2, strlen(p2) + 1);
+        }
         n = LiteralNode_new_string(p, line);
     }
     return n;
@@ -254,16 +282,129 @@ ASTNode* parse_base_expr(TokenQueue* input) {
 
     // if next token is ID then parse next token as location   
     } else if (check_next_token_type(input, ID)) {
+        printf("here1\n");
+        n = parse_loc(input);
 
-    // if next token is KEY then parse next token as FuncCall
-    } else if (check_next_token_type(input, KEY)) {
+    // if next token is keyword def then parse next token as FuncCall
+    } else if (check_next_token(input, KEY, "def")) {
+        printf("here\n");
 
-    // otherwise parse next token as literal
-    } else {
+    // if next token is literal then parse next token as Lit
+    } else if (check_next_token_type(input, DECLIT) || check_next_token_type(input, HEXLIT)
+                || check_next_token_type(input, STRLIT) || check_next_token(input, KEY, "true")
+                || check_next_token(input, KEY, "false")){
         n = parse_lit(input);
+    
+    // If token doesn't match any statements above -> invalid base expr throw error
+    } else {
+        Token* t = TokenQueue_remove(input);
+        Error_throw_printf("Invalid base expression \'%s\' on line %d\n", t->text, line);
     }
 
     return n;
+}
+
+ASTNode* parse_neg(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Expression expected but not found at line 1\n");
+    }
+
+    // get line number of negate expression
+    int line = get_next_token_line(input);
+    ASTNode* root = NULL;
+
+    if (check_next_token(input, SYM, "-") || check_next_token(input, SYM, "!")) {
+        ASTNode* new_root = NULL;
+        ASTNode* child = NULL;
+
+        if (check_next_token(input, SYM, "-")) { 
+            printf("here1\n");
+            match_and_discard_next_token(input, SYM, "-");
+            child = parse_base_expr(input);
+            new_root = UnaryOpNode_new(NEGOP, child, line);
+            root = new_root;
+        } else {
+            match_and_discard_next_token(input, SYM, "!");
+            child = parse_base_expr(input);
+            new_root = UnaryOpNode_new(NOTOP, child, line);
+            root = new_root;
+        }
+    } else {
+        root = parse_base_expr(input);
+    }
+    return root;
+}
+
+ASTNode* parse_arith(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Expression expected but not found at line 1\n");
+    }
+
+    // get line number of arithmetic expression
+    int line = get_next_token_line(input);
+    ASTNode* root = parse_neg(input);
+
+    while (check_next_token(input, SYM, "+") || check_next_token(input, SYM, "-")) {
+        ASTNode* new_root = NULL;
+        ASTNode* right = NULL;
+        if (check_next_token(input, SYM, "+")) {
+            match_and_discard_next_token(input, SYM, "+");
+            right = parse_neg(input);
+            new_root = BinaryOpNode_new(ADDOP, root, right, line);
+            root = new_root;
+        } else {
+            match_and_discard_next_token(input, SYM, "-");
+            right = parse_neg(input);
+            new_root = BinaryOpNode_new(SUBOP, root, right, line);
+            root = new_root;
+        }
+    }
+
+    return root;
+}
+
+ASTNode* parse_and(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Expression expected but not found at line 1\n");
+    }
+
+    // get line number of logical OR expression
+    int line = get_next_token_line(input);
+    ASTNode* root = parse_arith(input);
+
+    while (check_next_token(input, SYM, "&&")) {
+        ASTNode* new_root = NULL;
+        ASTNode* right = NULL;
+        if (check_next_token(input, SYM, "&&")) {
+            match_and_discard_next_token(input, SYM, "&&");
+            right = parse_arith(input);
+            new_root = BinaryOpNode_new(ANDOP, root, right, line);
+            root = new_root;
+        }
+    }
+    return root;
+}
+
+ASTNode* parse_or(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Expression expected but not found at line 1\n");
+    }
+
+    // get line number of logical OR expression
+    int line = get_next_token_line(input);
+    ASTNode* root = parse_and(input);
+
+    while (check_next_token(input, SYM, "||")) {
+        ASTNode* new_root = NULL;
+        ASTNode* right = NULL;
+        if (check_next_token(input, SYM, "||")) {
+            match_and_discard_next_token(input, SYM, "||");
+            right = parse_and(input);
+            new_root = BinaryOpNode_new(OROP, root, right, line);
+            root = new_root;
+        }
+    }
+    return root;
 }
 
 ASTNode* parse_expr(TokenQueue* input) {
@@ -272,28 +413,9 @@ ASTNode* parse_expr(TokenQueue* input) {
     }
 
     // parse base_expr only for now
-    ASTNode* n = parse_base_expr(input);
-    return n;
-}
+    // ASTNode* n = parse_base_expr(input);
 
-ASTNode* parse_loc(TokenQueue* input) {
-    if (TokenQueue_is_empty(input)) {
-        Error_throw_printf("Location expected but not found at line 1\n");
-    }
-
-    // get line number of location
-    int line = get_next_token_line(input);
-
-    // get name of location
-    char* buffer = malloc (MAX_TOKEN_LEN);
-    parse_id(input, buffer);
-    ASTNode* n = NULL;
-
-    // if next token is '=' then is it not array loc
-    if (check_next_token(input, SYM, "=")) {
-        n = LocationNode_new(buffer, NULL, line);
-    }
-
+    ASTNode* n = parse_or(input);
     return n;
 }
 
@@ -308,6 +430,31 @@ ASTNode* parse_conditional(TokenQueue* input) {
     // call parse_block (possibly twice if there's an else block)
     // n = ConditionalNode_new
 
+    return n;
+}
+
+ASTNode* parse_loc(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Location expected but not found at line 1\n");
+    }
+
+    // get line number of location
+    int line = get_next_token_line(input);
+
+    // get name of location
+    char* buffer = malloc (MAX_TOKEN_LEN);
+    parse_id(input, buffer);
+
+    ASTNode* n = NULL;
+    // if next token is SYM -> Loc is an array assignment
+    if (check_next_token(input, SYM, "[")) {
+        match_and_discard_next_token(input, SYM, "[");
+        ASTNode* index = parse_expr(input);
+        n = LocationNode_new(buffer, index, line);
+        match_and_discard_next_token(input, SYM, "]");
+    } else {
+        n = LocationNode_new(buffer, NULL, line);
+    }
     return n;
 }
 
@@ -349,7 +496,7 @@ ASTNode* parse_statement(TokenQueue* input) {
         ASTNode* val = NULL;
         TokenQueue_remove(input);
         // if ";" is not next token then parse return val
-        if (!check_next_token_type(input, SYM)) {
+        if (!check_next_token(input, SYM, ";")) {
             val = parse_expr(input);
         }
         n = ReturnNode_new(val, line);
@@ -363,11 +510,15 @@ ASTNode* parse_statement(TokenQueue* input) {
     } else if (check_next_token(input, KEY, "def")) {
 
     // parse location
-    } else {
+    } else if (check_next_token_type(input, ID)) {
         ASTNode* loc = parse_loc(input);
         match_and_discard_next_token(input, SYM, "=");
         ASTNode* value = parse_expr(input);
         n = AssignmentNode_new(loc, value, line);
+    
+    // If token does not match any statements above -> invalid statement throw error
+    } else {
+        Error_throw_printf("Invalid statement on line %d\n", line);
     }
 
     match_and_discard_next_token(input, SYM, ";");
@@ -468,5 +619,8 @@ ASTNode* parse_program (TokenQueue* input)
 
 ASTNode* parse (TokenQueue* input)
 {
+    if (input == NULL) {
+        Error_throw_printf("TokenQueue is NULL there are no tokens to parse\n");
+    }
     return parse_program(input);
 }

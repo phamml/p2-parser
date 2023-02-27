@@ -1,1 +1,1 @@
-def int foo() { return "abc";} 
+def int main () { return "ab\nc";}

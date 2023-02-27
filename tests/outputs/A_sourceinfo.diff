@@ -1,16 +1,14 @@
---- outputs/A_sourceinfo.txt	2023-02-26 14:35:02.968444420 -0500
+--- outputs/A_sourceinfo.txt	2023-02-27 18:38:38.860303429 -0500
 +++ expected/A_sourceinfo.txt	2023-02-15 13:08:40.285455199 -0500
-@@ -1,2 +1,11 @@
+@@ -1,10 +1,7 @@
 -1
 -main
-+Program [line 1]
-+  FuncDecl name="main" return_type=int parameters={} [line 1]
-+    Block [line 2]
+-here1
+ Program [line 1]
+   FuncDecl name="main" return_type=int parameters={} [line 1]
+     Block [line 2]
+-      VarDecl name="a" type=int is_array=no array_length=0 [line 3]
 +      VarDecl name="a" type=int is_array=no array_length=1 [line 3]
-+      Assignment [line 4]
-+        Location name="a" [line 4]
-+        Binaryop op="+" [line 4]
-+          Literal type=int value=4 [line 4]
-+          Literal type=int value=5 [line 4]
-+      Return [line 5]
-+        Location name="a" [line 5]
+       Assignment [line 4]
+         Location name="a" [line 4]
+         Binaryop op="+" [line 4]
