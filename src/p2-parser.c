@@ -420,15 +420,53 @@ ASTNode* parse_expr(TokenQueue* input) {
 }
 
 ASTNode* parse_conditional(TokenQueue* input) {
+
     if (TokenQueue_is_empty(input)) {
-        Error_throw_printf("Statement expected but not found at line 1\n");
+        Error_throw_printf("Conditional expected but not found at line 1\n");
     }
 
+    int line = get_next_token_line(input);
+
     // grammar: if ‘(’ Expr ‘)’ Block (else Block)?
-    ASTNode* n = NULL;
+ 
     // call parse_expr
     // call parse_block (possibly twice if there's an else block)
     // n = ConditionalNode_new
+
+    ASTNode* n = NULL;
+    ASTNode* condition = NULL;
+    ASTNode* if_block = NULL;
+    ASTNode* else_block = NULL;
+
+    TokenQueue_remove(input);
+
+    match_and_discard_next_token(input, SYM, "(");
+
+    condition = parse_expr(input);
+
+    match_and_discard_next_token(input, SYM, ")");
+ 
+
+    if_block = parse_block(input);
+
+    if (check_next_token(input, SYM, "(")) {
+
+        match_and_discard_next_token(input, SYM, "(");
+
+        if (check_next_token(input, KEY, "else")) {
+
+            match_and_discard_next_token(input, KEY, "else");
+
+            else_block = parse_expr(input);
+
+
+        }
+
+        match_and_discard_next_token(input, SYM, ")");
+
+    }
+
+    n = ConditionalNode_new(condition, if_block, else_block, line);
 
     return n;
 }
@@ -459,16 +497,30 @@ ASTNode* parse_loc(TokenQueue* input) {
 }
 
 ASTNode* parse_while(TokenQueue* input) {
+    
     if (TokenQueue_is_empty(input)) {
-        Error_throw_printf("Statement expected but not found at line 1\n");
+        Error_throw_printf("While loop expected but not found at line 1\n");
     }
 
     // grammar: while ‘(’ Expr ‘)’ Block
-    ASTNode* n = NULL;
     // call parse_expr
     // call parse_block
     // n = WhileLoopNode_new
 
+    int line = get_next_token_line(input);
+    
+    ASTNode* n = NULL;
+    ASTNode* expr = NULL;
+    ASTNode* block = NULL;
+
+    TokenQueue_remove(input);
+
+    match_and_discard_next_token(input, SYM, "(");
+    expr = parse_expr(input);
+
+    match_and_discard_next_token(input, SYM, ")");
+    block = parse_block(input);
+    n = WhileLoopNode_new(expr, block, line);
 
     return n;
 }
@@ -481,15 +533,18 @@ ASTNode* parse_statement(TokenQueue* input) {
     // get line number of statement
     int line = get_next_token_line(input);
 
+  
     ASTNode* n = NULL;
     // check what kind of statement and return appropriate statement node
     if (check_next_token(input, KEY, "break")) {
         TokenQueue_remove(input);
         n = BreakNode_new(line);
+        match_and_discard_next_token(input, SYM, ";");
 
     } else if (check_next_token(input, KEY, "continue")) {
         TokenQueue_remove(input);
         n = ContinueNode_new(line);
+        match_and_discard_next_token(input, SYM, ";");
 
     } else if (check_next_token(input, KEY, "return")) {
         // get val from calling parse_expr
@@ -500,12 +555,17 @@ ASTNode* parse_statement(TokenQueue* input) {
             val = parse_expr(input);
         }
         n = ReturnNode_new(val, line);
+        match_and_discard_next_token(input, SYM, ";");
 
     } else if (check_next_token(input, KEY, "while")) {
-        // call parse_while()
+       // TokenQueue_remove(input);
+        n = parse_while(input);
+       // n = WhileLoopNode_new()
     
     } else if (check_next_token(input, KEY, "if")) {
-        // call parse_conditional()
+        
+        n = parse_conditional(input);
+       //  match_and_discard_next_token(input, SYM, "?");
     
     } else if (check_next_token(input, KEY, "def")) {
 
@@ -515,13 +575,14 @@ ASTNode* parse_statement(TokenQueue* input) {
         match_and_discard_next_token(input, SYM, "=");
         ASTNode* value = parse_expr(input);
         n = AssignmentNode_new(loc, value, line);
+        match_and_discard_next_token(input, SYM, ";");
     
     // If token does not match any statements above -> invalid statement throw error
     } else {
         Error_throw_printf("Invalid statement on line %d\n", line);
     }
 
-    match_and_discard_next_token(input, SYM, ";");
+    
     return n;
 }
 
