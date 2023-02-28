@@ -100,6 +100,7 @@ bool check_next_token (TokenQueue* input, TokenType type, const char* text)
 
 // Prototype required because of mutual recursion
 ASTNode* parse_loc(TokenQueue* input);
+ASTNode* parse_expr(TokenQueue* input);
 
 /**
  * @brief Parse and return a Decaf type
@@ -268,6 +269,37 @@ ASTNode* parse_lit(TokenQueue* input) {
     return n;
 }
 
+ASTNode* parse_args(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Base expression expected but not found at line 1\n");
+    }
+
+    // get line number of args
+    int line = get_next_token_line(input);
+    ASTNode* n = NULL;
+
+    // should be similar to parse params except contains expr
+    // return NodeList
+
+    return NULL;
+}
+
+ASTNode* parse_funccall(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Base expression expected but not found at line 1\n");
+    }
+
+    // get line number of func call
+    int line = get_next_token_line(input);
+    ASTNode* n = NULL;
+
+    // return FuncCallNode_new
+    // need to parse name of func -> call parse id
+    // need tp parse args -> call parse_args
+
+    return NULL;
+}
+
 ASTNode* parse_base_expr(TokenQueue* input) {
     if (TokenQueue_is_empty(input)) {
         Error_throw_printf("Base expression expected but not found at line 1\n");
@@ -279,10 +311,12 @@ ASTNode* parse_base_expr(TokenQueue* input) {
 
     // if next token is "(" then there is another expr and should parse expr
     if (check_next_token(input, SYM, "(")) {
+        match_and_discard_next_token(input, SYM, "(");
+        n = parse_expr(input);
+        match_and_discard_next_token(input, SYM, ")");
 
     // if next token is ID then parse next token as location   
     } else if (check_next_token_type(input, ID)) {
-        printf("here1\n");
         n = parse_loc(input);
 
     // if next token is keyword def then parse next token as FuncCall
@@ -335,6 +369,42 @@ ASTNode* parse_neg(TokenQueue* input) {
     return root;
 }
 
+ASTNode* parse_mult(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Expression expected but not found at line 1\n");
+    }
+
+    // get line number of multiplicative expression
+    int line = get_next_token_line(input);
+    ASTNode* root = parse_neg(input);
+
+    while (check_next_token(input, SYM, "*") || check_next_token(input, SYM, "/")
+            || check_next_token(input, SYM, "%")) {
+        ASTNode* new_root = NULL;
+        ASTNode* right = NULL;
+        if (check_next_token(input, SYM, "*")) {
+            match_and_discard_next_token(input, SYM, "*");
+            right = parse_neg(input);
+            new_root = BinaryOpNode_new(MULOP, root, right, line);
+            root = new_root;
+        } else if (check_next_token(input, SYM, "/")) {
+            match_and_discard_next_token(input, SYM, "/");
+            right = parse_neg(input);
+            new_root = BinaryOpNode_new(DIVOP, root, right, line);
+            root = new_root;
+        } else {
+            match_and_discard_next_token(input, SYM, "%");
+            right = parse_neg(input);
+            new_root = BinaryOpNode_new(MODOP, root, right, line);
+            root = new_root;
+        }
+    }
+
+    return root;
+
+    
+}
+
 ASTNode* parse_arith(TokenQueue* input) {
     if (TokenQueue_is_empty(input)) {
         Error_throw_printf("Expression expected but not found at line 1\n");
@@ -342,24 +412,89 @@ ASTNode* parse_arith(TokenQueue* input) {
 
     // get line number of arithmetic expression
     int line = get_next_token_line(input);
-    ASTNode* root = parse_neg(input);
+    ASTNode* root = parse_mult(input);
 
     while (check_next_token(input, SYM, "+") || check_next_token(input, SYM, "-")) {
         ASTNode* new_root = NULL;
         ASTNode* right = NULL;
         if (check_next_token(input, SYM, "+")) {
             match_and_discard_next_token(input, SYM, "+");
-            right = parse_neg(input);
+            right = parse_mult(input);
             new_root = BinaryOpNode_new(ADDOP, root, right, line);
             root = new_root;
         } else {
             match_and_discard_next_token(input, SYM, "-");
-            right = parse_neg(input);
+            right = parse_mult(input);
             new_root = BinaryOpNode_new(SUBOP, root, right, line);
             root = new_root;
         }
     }
 
+    return root;
+}
+
+ASTNode* parse_relational(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Expression expected but not found at line 1\n");
+    }
+
+    // get line number of relational expression
+    int line = get_next_token_line(input);
+    ASTNode* root = parse_arith(input);
+
+    while (check_next_token(input, SYM, "<") || check_next_token(input, SYM, "<=")
+            || check_next_token(input, SYM, ">") || check_next_token(input, SYM, ">=")) {
+        ASTNode* new_root = NULL;
+        ASTNode* right = NULL;
+        if (check_next_token(input, SYM, "<")) {
+            match_and_discard_next_token(input, SYM, "<");
+            right = parse_arith(input);
+            new_root = BinaryOpNode_new(LTOP, root, right, line);
+            root = new_root;
+        } else if (check_next_token(input, SYM, "<=")){
+            match_and_discard_next_token(input, SYM, "<=");
+            right = parse_arith(input);
+            new_root = BinaryOpNode_new(LEOP, root, right, line);
+            root = new_root;
+        } else if (check_next_token(input, SYM, ">")){
+            match_and_discard_next_token(input, SYM, ">");
+            right = parse_arith(input);
+            new_root = BinaryOpNode_new(GTOP, root, right, line);
+            root = new_root;
+        } else {
+            match_and_discard_next_token(input, SYM, ">=");
+            right = parse_arith(input);
+            new_root = BinaryOpNode_new(GEOP, root, right, line);
+            root = new_root;
+        }
+    }
+    return root;
+}
+
+ASTNode* parse_equality(TokenQueue* input) {
+    if (TokenQueue_is_empty(input)) {
+        Error_throw_printf("Expression expected but not found at line 1\n");
+    }
+
+    // get line number of equality expression
+    int line = get_next_token_line(input);
+    ASTNode* root = parse_relational(input);
+
+    while (check_next_token(input, SYM, "==") || check_next_token(input, SYM, "!=")) {
+        ASTNode* new_root = NULL;
+        ASTNode* right = NULL;
+        if (check_next_token(input, SYM, "==")) {
+            match_and_discard_next_token(input, SYM, "==");
+            right = parse_relational(input);
+            new_root = BinaryOpNode_new(EQOP, root, right, line);
+            root = new_root;
+        } else {
+            match_and_discard_next_token(input, SYM, "!=");
+            right = parse_relational(input);
+            new_root = BinaryOpNode_new(NEQOP, root, right, line);
+            root = new_root;
+        }
+    }
     return root;
 }
 
@@ -370,14 +505,14 @@ ASTNode* parse_and(TokenQueue* input) {
 
     // get line number of logical OR expression
     int line = get_next_token_line(input);
-    ASTNode* root = parse_arith(input);
+    ASTNode* root = parse_equality(input);
 
     while (check_next_token(input, SYM, "&&")) {
         ASTNode* new_root = NULL;
         ASTNode* right = NULL;
         if (check_next_token(input, SYM, "&&")) {
             match_and_discard_next_token(input, SYM, "&&");
-            right = parse_arith(input);
+            right = parse_equality(input);
             new_root = BinaryOpNode_new(ANDOP, root, right, line);
             root = new_root;
         }
