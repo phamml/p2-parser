@@ -101,6 +101,7 @@ bool check_next_token (TokenQueue* input, TokenType type, const char* text)
 // Prototype required because of mutual recursion
 ASTNode* parse_loc(TokenQueue* input);
 ASTNode* parse_expr(TokenQueue* input);
+ASTNode* parse_block(TokenQueue* input);
 
 /**
  * @brief Parse and return a Decaf type
@@ -176,7 +177,7 @@ ASTNode* parse_vardecl(TokenQueue* input)
         n = VarDeclNode_new(buffer, type, true, length, line);
         match_and_discard_next_token(input, SYM, "]");
     } else {
-        n = VarDeclNode_new(buffer, type, false, 0, line);
+        n = VarDeclNode_new(buffer, type, false, 1, line);
     }
     match_and_discard_next_token(input, SYM, ";");
     return n;
@@ -185,36 +186,37 @@ ASTNode* parse_vardecl(TokenQueue* input)
 ParameterList* parse_params(TokenQueue* input) {
     // check if empty
     if (TokenQueue_is_empty(input)) {
-        Error_throw_printf("Parameter expected but not found at line 1\n");
+        Error_throw_printf("Unexpected end of input (expected type)\n");
     }
 
-    match_and_discard_next_token(input, SYM, "(");
+    // match_and_discard_next_token(input, SYM, "(");
+    // ParameterList* params = ParameterList_new();
+
+    // // if next token is ")" then param list is empty just return
+    // if (check_next_token_type(input, SYM)) {
+    //     match_and_discard_next_token(input, SYM, ")");
+    //     return params;
+    // } else {
+
+    // parse first param
     ParameterList* params = ParameterList_new();
+    DecafType type = parse_type(input);
+    char* buffer = malloc (MAX_TOKEN_LEN);
+    parse_id(input, buffer);
+    ParameterList_add_new(params, buffer, type);
 
-    // if next token is ")" then param list is empty just return
-    if (check_next_token_type(input, SYM)) {
-        match_and_discard_next_token(input, SYM, ")");
-        return params;
-    } else {
-        // parse first param
-        DecafType type = parse_type(input);
-        char* buffer = malloc (MAX_TOKEN_LEN);
-        parse_id(input, buffer);
-        ParameterList_add_new(params, buffer, type);
-
-        // if next token is "," then more params present -> keep parsing
-        // and adding to param list until ")" is seen
-        if (check_next_token(input, SYM, ",")) {
-            while (!check_next_token(input, SYM, ")")) {
-                match_and_discard_next_token(input, SYM, ",");
-                type = parse_type(input);
-                buffer = malloc (MAX_TOKEN_LEN);
-                parse_id(input, buffer);
-                ParameterList_add_new(params, buffer, type);
-            }
+    // if next token is "," then more params present -> keep parsing
+    // and adding to param list until ")" is seen
+    if (check_next_token(input, SYM, ",")) {
+        while (!check_next_token(input, SYM, ")")) {
+            match_and_discard_next_token(input, SYM, ",");
+            type = parse_type(input);
+            buffer = malloc (MAX_TOKEN_LEN);
+            parse_id(input, buffer);
+            ParameterList_add_new(params, buffer, type);
         }
     }
-    match_and_discard_next_token(input, SYM, ")");
+
     return params;
 }
 
@@ -269,35 +271,53 @@ ASTNode* parse_lit(TokenQueue* input) {
     return n;
 }
 
-ASTNode* parse_args(TokenQueue* input) {
+NodeList* parse_args(TokenQueue* input) {
     if (TokenQueue_is_empty(input)) {
-        Error_throw_printf("Base expression expected but not found at line 1\n");
+        Error_throw_printf("Unexpected end of input (expected expr)\n");
     }
 
     // get line number of args
     int line = get_next_token_line(input);
-    ASTNode* n = NULL;
+    NodeList* args = NodeList_new();
 
-    // should be similar to parse params except contains expr
-    // return NodeList
+    ASTNode* expr = parse_expr(input);
+    NodeList_add(args, expr);
 
-    return NULL;
+    // if next token is "," then more args present -> keep parsing
+    // and adding to args list until ")" is seen
+    if (check_next_token(input, SYM, ",")) {
+        while (!check_next_token(input, SYM, ")")) {
+            match_and_discard_next_token(input, SYM, ",");
+            expr = parse_expr(input);
+            NodeList_add(args, expr);
+        }
+    }
+    return args;
 }
 
 ASTNode* parse_funccall(TokenQueue* input) {
     if (TokenQueue_is_empty(input)) {
-        Error_throw_printf("Base expression expected but not found at line 1\n");
+        Error_throw_printf("Unexpected end of input (expected ID)\n");
     }
 
     // get line number of func call
     int line = get_next_token_line(input);
-    ASTNode* n = NULL;
 
     // return FuncCallNode_new
     // need to parse name of func -> call parse id
     // need tp parse args -> call parse_args
+    char* buffer = malloc (MAX_TOKEN_LEN);
+    parse_id(input, buffer);
+    
+    NodeList* args  = NodeList_new();
+    match_and_discard_next_token(input, SYM, "(");
+    if (!check_next_token(input, SYM, ")")) {
+        args = parse_args(input);
+    } 
 
-    return NULL;
+    match_and_discard_next_token(input, SYM, ")");
+    ASTNode* n = FuncCallNode_new(buffer, args, line);
+    return n;
 }
 
 ASTNode* parse_base_expr(TokenQueue* input) {
@@ -315,13 +335,14 @@ ASTNode* parse_base_expr(TokenQueue* input) {
         n = parse_expr(input);
         match_and_discard_next_token(input, SYM, ")");
 
+    // if next token is keyword def then parse next token as FuncCall
+    } else if (check_next_token_type(input, ID) && token_str_eq(input->head->next->text, "(")) {
+        // printf("here\n");
+        n = parse_funccall(input);
+    
     // if next token is ID then parse next token as location   
     } else if (check_next_token_type(input, ID)) {
         n = parse_loc(input);
-
-    // if next token is keyword def then parse next token as FuncCall
-    } else if (check_next_token(input, KEY, "def")) {
-        printf("here\n");
 
     // if next token is literal then parse next token as Lit
     } else if (check_next_token_type(input, DECLIT) || check_next_token_type(input, HEXLIT)
@@ -352,7 +373,7 @@ ASTNode* parse_neg(TokenQueue* input) {
         ASTNode* child = NULL;
 
         if (check_next_token(input, SYM, "-")) { 
-            printf("here1\n");
+            // printf("here1\n");
             match_and_discard_next_token(input, SYM, "-");
             child = parse_base_expr(input);
             new_root = UnaryOpNode_new(NEGOP, child, line);
@@ -702,7 +723,10 @@ ASTNode* parse_statement(TokenQueue* input) {
         n = parse_conditional(input);
        //  match_and_discard_next_token(input, SYM, "?");
     
-    } else if (check_next_token(input, KEY, "def")) {
+    // if next token is keyword def then parse next token as FuncCall
+    } else if (check_next_token_type(input, ID) && token_str_eq(input->head->next->text, "(")) {
+        // printf("here\n");
+        n = parse_funccall(input);
 
     // parse location
     } else if (check_next_token_type(input, ID)) {
@@ -774,15 +798,21 @@ ASTNode* parse_funcdecl(TokenQueue* input) {
     // get return type of func decl
     match_and_discard_next_token(input, KEY, "def");
     DecafType type = parse_type(input);
-    printf("%d\n", type);
+    // printf("%d\n", type);
 
     // get func name
     char* buffer = malloc (MAX_TOKEN_LEN);
     parse_id(input, buffer);
-    printf("%s\n", buffer);
+    // printf("%s\n", buffer);
 
     // get params and body of func and create new funcdecl node
-    ParameterList* params = parse_params(input);
+    ParameterList* params = ParameterList_new();
+    match_and_discard_next_token(input, SYM, "(");
+    if (!check_next_token(input, SYM, ")")) {
+        params = parse_params(input);
+    }
+
+    match_and_discard_next_token(input, SYM, ")");
     ASTNode* body = parse_block(input);
     ASTNode* n = FuncDeclNode_new(buffer, type, params, body, line);
     return n;

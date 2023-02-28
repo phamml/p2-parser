@@ -1,6 +1,6 @@
-A_sourceinfo                   FAIL (see outputs/A_sourceinfo.diff for details)
+A_sourceinfo                   pass
 Memory leak(s) found. See files listed below for details.
-  - ==1503334==    definitely lost
+  - ==2723312==    definitely lost
 ========================================
  NOTICE: THIS TESTSUITE IS INCOMPLETE.
 YOU WILL BE GRADED ON OTHER TEST CASES.
