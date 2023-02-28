@@ -605,26 +605,19 @@ ASTNode* parse_conditional(TokenQueue* input) {
 
     if_block = parse_block(input);
 
-    if (check_next_token(input, SYM, "(")) {
+    if (check_next_token(input, KEY, "else")) {
 
-        match_and_discard_next_token(input, SYM, "(");
+        match_and_discard_next_token(input, KEY, "else");
 
-        if (check_next_token(input, KEY, "else")) {
+        else_block = parse_expr(input);
 
-            match_and_discard_next_token(input, KEY, "else");
-
-            else_block = parse_expr(input);
-
-
-        }
-
-        match_and_discard_next_token(input, SYM, ")");
 
     }
 
     n = ConditionalNode_new(condition, if_block, else_block, line);
 
     return n;
+
 }
 
 ASTNode* parse_loc(TokenQueue* input) {
