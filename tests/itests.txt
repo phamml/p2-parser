@@ -1,6 +1,6 @@
 A_sourceinfo                   pass
 Memory leak(s) found. See files listed below for details.
-  - ==2723312==    definitely lost
+  - ==3450771==    definitely lost
 ========================================
  NOTICE: THIS TESTSUITE IS INCOMPLETE.
 YOU WILL BE GRADED ON OTHER TEST CASES.
