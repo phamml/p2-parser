@@ -1,1 +1,1 @@
-def int foo(
+def void foo() { if (x == 0) { return 6; }  return "abc" ; }

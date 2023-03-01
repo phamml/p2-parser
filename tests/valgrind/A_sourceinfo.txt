@@ -1,8 +1,8 @@
-==3450771== Memcheck, a memory error detector
-==3450771== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
-==3450771== Using Valgrind-3.15.0 and LibVEX; rerun with -h for copyright info
-==3450771== Command: ../decaf inputs/add.decaf
-==3450771== 
+==3972068== Memcheck, a memory error detector
+==3972068== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
+==3972068== Using Valgrind-3.15.0 and LibVEX; rerun with -h for copyright info
+==3972068== Command: ../decaf inputs/add.decaf
+==3972068== 
 Program [line 1]
   FuncDecl name="main" return_type=int parameters={} [line 1]
     Block [line 2]
@@ -14,18 +14,18 @@ Program [line 1]
           Literal type=int value=5 [line 4]
       Return [line 5]
         Location name="a" [line 5]
-==3450771== 
-==3450771== HEAP SUMMARY:
-==3450771==     in use at exit: 1,840 bytes in 7 blocks
-==3450771==   total heap usage: 1,757 allocs, 1,750 frees, 205,992 bytes allocated
-==3450771== 
-==3450771== LEAK SUMMARY:
-==3450771==    definitely lost: 1,840 bytes in 7 blocks
-==3450771==    indirectly lost: 0 bytes in 0 blocks
-==3450771==      possibly lost: 0 bytes in 0 blocks
-==3450771==    still reachable: 0 bytes in 0 blocks
-==3450771==         suppressed: 0 bytes in 0 blocks
-==3450771== Rerun with --leak-check=full to see details of leaked memory
-==3450771== 
-==3450771== For lists of detected and suppressed errors, rerun with: -s
-==3450771== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+==3972068== 
+==3972068== HEAP SUMMARY:
+==3972068==     in use at exit: 1,840 bytes in 7 blocks
+==3972068==   total heap usage: 1,757 allocs, 1,750 frees, 205,992 bytes allocated
+==3972068== 
+==3972068== LEAK SUMMARY:
+==3972068==    definitely lost: 1,840 bytes in 7 blocks
+==3972068==    indirectly lost: 0 bytes in 0 blocks
+==3972068==      possibly lost: 0 bytes in 0 blocks
+==3972068==    still reachable: 0 bytes in 0 blocks
+==3972068==         suppressed: 0 bytes in 0 blocks
+==3972068== Rerun with --leak-check=full to see details of leaked memory
+==3972068== 
+==3972068== For lists of detected and suppressed errors, rerun with: -s
+==3972068== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
