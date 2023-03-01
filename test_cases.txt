@@ -2,5 +2,56 @@ def int foo(
 
 "" (empty string)
 
+check all escape characters: \n \t \" \\
+
+uppercase hex numbers
+
+invalid assignments:
+    4 = a
+    4 = a[0]
+
+invalid array
+    a[[9] = 0
+    a[@] = 0
+    a[int x] = 0
+
+
 comments
+
+invalid break/continue:
+    break 5;
+    continue 6;
+
+invalid args/params:
+    def int foo (,) {}
+    foo (,);
+
+invalid expressions:
+    + 5;
+    6 ! 3;
+
+double check expressions:
+    5 * 2
+    3 + (5 * 2)
+    5 * 3 * 2
+    (5 + 3) <= (5 * 8)
+    !true || false
+
+
+Order of functions should be:
+Type
+ID
+Lit
+VarDecl
+Params
+Block
+FuncDecl
+Location
+Args
+FuncCall
+Base expr
+All other expressions
+Expression
+Statement
+Program
 
