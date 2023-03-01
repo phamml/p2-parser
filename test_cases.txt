@@ -1,1 +1,6 @@
 def int foo(
+
+"" (empty string)
+
+comments
+

@@ -112,7 +112,7 @@ ASTNode* parse_block(TokenQueue* input);
 DecafType parse_type (TokenQueue* input)
 {
     if (TokenQueue_is_empty(input)) {
-        Error_throw_printf("Variable declaration expected but not found at line 1\n");
+        Error_throw_printf("Unexpected end of input (expected int, bool, or void)\n");
     }
 
     Token* token = TokenQueue_remove(input);
@@ -143,7 +143,7 @@ DecafType parse_type (TokenQueue* input)
 void parse_id (TokenQueue* input, char* buffer)
 {
     if (TokenQueue_is_empty(input)) {
-        Error_throw_printf("ID expected but not found at line 1\n");
+        Error_throw_printf("Unexpected end of input (expected id token)\n");
     }
 
     Token* token = TokenQueue_remove(input);
@@ -158,7 +158,7 @@ ASTNode* parse_vardecl(TokenQueue* input)
 {
     // check if empty
     if (TokenQueue_is_empty(input)) {
-        Error_throw_printf("Variable declaration expected but not found at line 1\n");
+        Error_throw_printf("Unexpected end of input (expected type)\n");
     }
     
     int line = get_next_token_line(input);
@@ -222,7 +222,7 @@ ParameterList* parse_params(TokenQueue* input) {
 
 ASTNode* parse_lit(TokenQueue* input) {
     if (TokenQueue_is_empty(input)) {
-        Error_throw_printf("Literal expected but not found at line 1\n");
+        Error_throw_printf("Unexpected end of input (expected DEC, HEX, STR, false, or true)\n");
     }
 
     // get line number of literal
@@ -322,7 +322,7 @@ ASTNode* parse_funccall(TokenQueue* input) {
 
 ASTNode* parse_base_expr(TokenQueue* input) {
     if (TokenQueue_is_empty(input)) {
-        Error_throw_printf("Base expression expected but not found at line 1\n");
+        Error_throw_printf("Unexpected end of input (expected another expression, location, function call, or literal");
     }
 
     // get line number of base expression
@@ -361,7 +361,7 @@ ASTNode* parse_base_expr(TokenQueue* input) {
 
 ASTNode* parse_neg(TokenQueue* input) {
     if (TokenQueue_is_empty(input)) {
-        Error_throw_printf("Expression expected but not found at line 1\n");
+        Error_throw_printf("Unexpected end of input (expected unary operator: - or !)\n");
     }
 
     // get line number of negate expression
