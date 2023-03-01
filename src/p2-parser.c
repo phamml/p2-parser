@@ -355,7 +355,6 @@ ASTNode* parse_base_expr(TokenQueue* input) {
         Token* t = TokenQueue_remove(input);
         Error_throw_printf("Invalid base expression \'%s\' on line %d\n", t->text, line);
     }
-
     return n;
 }
 
@@ -709,6 +708,7 @@ ASTNode* parse_statement(TokenQueue* input) {
     // if next token is keyword def then parse next token as FuncCall
     } else if (check_next_token_type(input, ID) && token_str_eq(input->head->next->text, "(")) {
         n = parse_funccall(input);
+        match_and_discard_next_token(input, SYM, ";");
 
     // parse location
     } else if (check_next_token_type(input, ID)) {
