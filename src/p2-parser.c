@@ -176,10 +176,12 @@ ASTNode* parse_vardecl(TokenQueue* input)
         int length = (int) strtol(token->text, NULL, 10);
         n = VarDeclNode_new(buffer, type, true, length, line);
         match_and_discard_next_token(input, SYM, "]");
+        Token_free(token);
     } else {
         n = VarDeclNode_new(buffer, type, false, 1, line);
     }
     match_and_discard_next_token(input, SYM, ";");
+    free(buffer);
     return n;
 }
 
@@ -207,6 +209,8 @@ ParameterList* parse_params(TokenQueue* input) {
             ParameterList_add_new(params, buffer, type);
         }
     }
+
+    free(buffer);
 
     return params;
 }
@@ -271,6 +275,7 @@ ASTNode* parse_lit(TokenQueue* input) {
         strncat(p, p2, strlen(p2) + 1);
         n = LiteralNode_new_string(p, line);
     }
+    Token_free(token);
     return n;
 }
 
@@ -318,6 +323,8 @@ ASTNode* parse_funccall(TokenQueue* input) {
 
     match_and_discard_next_token(input, SYM, ")");
     ASTNode* n = FuncCallNode_new(buffer, args, line);
+
+    free(buffer);
     return n;
 }
 
@@ -354,6 +361,7 @@ ASTNode* parse_base_expr(TokenQueue* input) {
     } else {
         Token* t = TokenQueue_remove(input);
         Error_throw_printf("Invalid base expression \'%s\' on line %d\n", t->text, line);
+        Token_free(t);
     }
     return n;
 }
@@ -585,7 +593,7 @@ ASTNode* parse_conditional(TokenQueue* input) {
     ASTNode* if_block = NULL;
     ASTNode* else_block = NULL;
 
-    TokenQueue_remove(input);
+    Token_free(TokenQueue_remove(input));
 
     match_and_discard_next_token(input, SYM, "(");
 
@@ -632,6 +640,8 @@ ASTNode* parse_loc(TokenQueue* input) {
     } else {
         n = LocationNode_new(buffer, NULL, line);
     }
+
+    free(buffer);
     return n;
 }
 
@@ -652,7 +662,7 @@ ASTNode* parse_while(TokenQueue* input) {
     ASTNode* expr = NULL;
     ASTNode* block = NULL;
 
-    TokenQueue_remove(input);
+    Token_free(TokenQueue_remove(input));
 
     match_and_discard_next_token(input, SYM, "(");
     expr = parse_expr(input);
@@ -675,19 +685,19 @@ ASTNode* parse_statement(TokenQueue* input) {
     ASTNode* n = NULL;
     // check what kind of statement and return appropriate statement node
     if (check_next_token(input, KEY, "break")) {
-        TokenQueue_remove(input);
+       Token_free(TokenQueue_remove(input));
         n = BreakNode_new(line);
         match_and_discard_next_token(input, SYM, ";");
 
     } else if (check_next_token(input, KEY, "continue")) {
-        TokenQueue_remove(input);
+       Token_free(TokenQueue_remove(input));
         n = ContinueNode_new(line);
         match_and_discard_next_token(input, SYM, ";");
 
     } else if (check_next_token(input, KEY, "return")) {
         // get val from calling parse_expr
         ASTNode* val = NULL;
-        TokenQueue_remove(input);
+        Token_free(TokenQueue_remove(input));
         // if ";" is not next token then parse return val
         if (!check_next_token(input, SYM, ";")) {
             val = parse_expr(input);
@@ -794,6 +804,8 @@ ASTNode* parse_funcdecl(TokenQueue* input) {
     match_and_discard_next_token(input, SYM, ")");
     ASTNode* body = parse_block(input);
     ASTNode* n = FuncDeclNode_new(buffer, type, params, body, line);
+
+    free(buffer);
     return n;
 }
 
