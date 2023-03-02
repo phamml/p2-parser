@@ -608,7 +608,7 @@ ASTNode* parse_conditional(TokenQueue* input) {
 
         match_and_discard_next_token(input, KEY, "else");
 
-        else_block = parse_expr(input);
+        else_block = parse_block(input);
 
 
     }
