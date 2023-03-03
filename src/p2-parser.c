@@ -254,26 +254,42 @@ ASTNode* parse_lit(TokenQueue* input) {
         char *p = token->text + 1;
         p[strlen(p)-1] = 0;
 
-        // fix escape character present in string
-        char* p2 = NULL;
-        char* escp = NULL;
-        if ((p2 = strstr( p, "\\n"))) {
-            escp = "\n";
-        } else if ((p2 = strstr( p, "\\t"))) {
-            escp = "\t";
-        } else if ((p2 = strstr( p, "\\\\"))) {
-            escp = "\\";
-        } else if ((p2 = strstr( p, "\\\""))) {
-            escp = "\"";
-        } else {
-            return LiteralNode_new_string(p, line);
+        // fixing escape characters
+        char *buffer = calloc(MAX_TOKEN_LEN, sizeof(char));
+        char* p2 = strstr(p, "\\");
+        int count = 0;
+        int i = 0;
+        while (strstr( p2 + i, "\\")) {
+            count++;
+            i++;
         }
 
-        p[p2 - p] = '\0';
-        p2 = p2 + 2;
-        strncat(p, escp, 3);
-        strncat(p, p2, strlen(p2) + 1);
-        n = LiteralNode_new_string(p, line);
+        // handles multiples slashes
+        if (count > 1) {
+            p[p2 - p] = '\0';
+            p2 = p2 + (count / 2);
+            strncpy(buffer, p, MAX_TOKEN_LEN);
+            strncat(buffer, p2, MAX_TOKEN_LEN - strlen(p2));
+        } else {
+            char* escp = NULL;
+            if ((p2 = strstr( p, "\\n"))) {
+                escp = "\n";
+            } else if ((p2 = strstr( p, "\\t"))) {
+                escp = "\t";
+            } else if ((p2 = strstr( p, "\\\\"))) {
+                escp = "\\";
+            } else if ((p2 = strstr( p, "\\\""))) {
+                escp = "\"";
+            } else {
+                return LiteralNode_new_string(p, line);
+            }
+            p[p2 - p] = '\0';
+            p2 = p2 + 2;
+            strncpy(buffer, p, MAX_TOKEN_LEN);
+            strncat(buffer, escp, MAX_TOKEN_LEN - strlen(escp));
+            strncat(buffer, p2, MAX_TOKEN_LEN - strlen(p2));
+        }
+        n = LiteralNode_new_string(buffer, line);
     }
     Token_free(token);
     return n;
