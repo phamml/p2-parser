@@ -171,14 +171,16 @@ ASTNode* parse_vardecl(TokenQueue* input)
     // if next token is symbol -> VarDecl is an array assignment
     if (check_next_token(input, SYM, "[")) {
         match_and_discard_next_token(input, SYM, "[");
-        // check if next token is ] else do all below
-
-        Token* token = TokenQueue_remove(input);
-        // convert dec string to int
-        int length = (int) strtol(token->text, NULL, 10);
-        n = VarDeclNode_new(buffer, type, true, length, line);
-        match_and_discard_next_token(input, SYM, "]");
-        Token_free(token);
+        if (!check_next_token_type(input, DECLIT)) {
+            Error_throw_printf("Invalid array size '%s' on line %d\n", TokenQueue_peek(input)->text, line);
+        } else {
+            Token* token = TokenQueue_remove(input);
+            // convert dec string to int
+            int length = (int) strtol(token->text, NULL, 10);
+            n = VarDeclNode_new(buffer, type, true, length, line);
+            match_and_discard_next_token(input, SYM, "]");
+            Token_free(token);
+        }
     } else {
         n = VarDeclNode_new(buffer, type, false, 1, line);
     }
@@ -307,7 +309,6 @@ NodeList* parse_args(TokenQueue* input) {
 
     // get line number of args
     NodeList* args = NodeList_new();
-
     ASTNode* expr = parse_expr(input);
     NodeList_add(args, expr);
 
@@ -364,7 +365,7 @@ ASTNode* parse_base_expr(TokenQueue* input) {
         n = parse_expr(input);
         match_and_discard_next_token(input, SYM, ")");
 
-    // if next token is keyword def then parse next token as FuncCall
+    // if next token is ID and next next token is () then parse next token as FuncCall
     } else if (check_next_token_type(input, ID) && token_str_eq(input->head->next->text, "(")) {
         n = parse_funccall(input);
     
@@ -447,7 +448,6 @@ ASTNode* parse_mult(TokenQueue* input) {
             root = new_root;
         }
     }
-
     return root; 
 }
 
@@ -475,7 +475,6 @@ ASTNode* parse_arith(TokenQueue* input) {
             root = new_root;
         }
     }
-
     return root;
 }
 
@@ -597,9 +596,8 @@ ASTNode* parse_expr(TokenQueue* input) {
 }
 
 ASTNode* parse_conditional(TokenQueue* input) {
-
     if (TokenQueue_is_empty(input)) {
-        Error_throw_printf("Conditional expected but not found at line 1\n");
+        Error_throw_printf("Unexpected end of input (expected 'if')\n");
     }
 
     int line = get_next_token_line(input);
@@ -615,27 +613,18 @@ ASTNode* parse_conditional(TokenQueue* input) {
     ASTNode* else_block = NULL;
 
     Token_free(TokenQueue_remove(input));
-
     match_and_discard_next_token(input, SYM, "(");
-
     condition = parse_expr(input);
-
     match_and_discard_next_token(input, SYM, ")");
- 
 
     if_block = parse_block(input);
 
     if (check_next_token(input, KEY, "else")) {
-
         match_and_discard_next_token(input, KEY, "else");
-
         else_block = parse_block(input);
-
-
     }
 
     n = ConditionalNode_new(condition, if_block, else_block, line);
-
     return n;
 }
 
@@ -669,7 +658,7 @@ ASTNode* parse_loc(TokenQueue* input) {
 ASTNode* parse_while(TokenQueue* input) {
     
     if (TokenQueue_is_empty(input)) {
-        Error_throw_printf("While loop expected but not found at line 1\n");
+        Error_throw_printf("Unexpected end of input (expected 'while')\n");
     }
 
     // grammar: while ‘(’ Expr ‘)’ Block
@@ -727,16 +716,12 @@ ASTNode* parse_statement(TokenQueue* input) {
         match_and_discard_next_token(input, SYM, ";");
 
     } else if (check_next_token(input, KEY, "while")) {
-       // TokenQueue_remove(input);
         n = parse_while(input);
-       // n = WhileLoopNode_new()
     
     } else if (check_next_token(input, KEY, "if")) {
-        
         n = parse_conditional(input);
-       //  match_and_discard_next_token(input, SYM, "?");
     
-    // if next token is keyword def then parse next token as FuncCall
+    // if next token is ID and next next token is () then parse next token as FuncCall
     } else if (check_next_token_type(input, ID) && token_str_eq(input->head->next->text, "(")) {
         n = parse_funccall(input);
         match_and_discard_next_token(input, SYM, ";");
@@ -809,7 +794,6 @@ ASTNode* parse_funcdecl(TokenQueue* input) {
     // get return type of func decl
     match_and_discard_next_token(input, KEY, "def");
     DecafType type = parse_type(input);
-    // printf("%d\n", type);
 
     // get func name
     char* buffer = malloc (MAX_TOKEN_LEN);
