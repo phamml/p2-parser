@@ -1,2 +1,2 @@
-def void foo() { test(a);  return "hello\\\\bye" ; }
+def void foo() { test(a);  return "abc" ; }
 

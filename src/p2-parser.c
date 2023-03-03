@@ -171,6 +171,8 @@ ASTNode* parse_vardecl(TokenQueue* input)
     // if next token is symbol -> VarDecl is an array assignment
     if (check_next_token(input, SYM, "[")) {
         match_and_discard_next_token(input, SYM, "[");
+        // check if next token is ] else do all below
+
         Token* token = TokenQueue_remove(input);
         // convert dec string to int
         int length = (int) strtol(token->text, NULL, 10);
@@ -211,7 +213,6 @@ ParameterList* parse_params(TokenQueue* input) {
     }
 
     free(buffer);
-
     return params;
 }
 
@@ -259,37 +260,41 @@ ASTNode* parse_lit(TokenQueue* input) {
         char* p2 = strstr(p, "\\");
         int count = 0;
         int i = 0;
-        while (strstr( p2 + i, "\\")) {
+
+        if (p2) {
+            while (strstr( p2 + i, "\\")) {
             count++;
             i++;
-        }
-
-        // handles multiples slashes
-        if (count > 1) {
-            p[p2 - p] = '\0';
-            p2 = p2 + (count / 2);
-            strncpy(buffer, p, MAX_TOKEN_LEN);
-            strncat(buffer, p2, MAX_TOKEN_LEN - strlen(p2));
-        } else {
-            char* escp = NULL;
-            if ((p2 = strstr( p, "\\n"))) {
-                escp = "\n";
-            } else if ((p2 = strstr( p, "\\t"))) {
-                escp = "\t";
-            } else if ((p2 = strstr( p, "\\\\"))) {
-                escp = "\\";
-            } else if ((p2 = strstr( p, "\\\""))) {
-                escp = "\"";
-            } else {
-                return LiteralNode_new_string(p, line);
             }
-            p[p2 - p] = '\0';
-            p2 = p2 + 2;
-            strncpy(buffer, p, MAX_TOKEN_LEN);
-            strncat(buffer, escp, MAX_TOKEN_LEN - strlen(escp));
-            strncat(buffer, p2, MAX_TOKEN_LEN - strlen(p2));
+
+            // handles multiples slashes
+            if (count > 1) {
+                p[p2 - p] = '\0';
+                p2 = p2 + (count / 2);
+                strncpy(buffer, p, MAX_TOKEN_LEN);
+                strncat(buffer, p2, MAX_TOKEN_LEN - strlen(p2));
+            } else {
+                char* escp = NULL;
+                if ((p2 = strstr( p, "\\n"))) {
+                    escp = "\n";
+                } else if ((p2 = strstr( p, "\\t"))) {
+                    escp = "\t";
+                } else if ((p2 = strstr( p, "\\\\"))) {
+                    escp = "\\";
+                } else if ((p2 = strstr( p, "\\\""))) {
+                    escp = "\"";
+                } 
+                p[p2 - p] = '\0';
+                p2 = p2 + 2;
+                strncpy(buffer, p, MAX_TOKEN_LEN);
+                strncat(buffer, escp, MAX_TOKEN_LEN - strlen(escp));
+                strncat(buffer, p2, MAX_TOKEN_LEN - strlen(p2));
+            }
+            n = LiteralNode_new_string(buffer, line);
+        } else {
+            return LiteralNode_new_string(p, line);
         }
-        n = LiteralNode_new_string(buffer, line);
+        
     }
     Token_free(token);
     return n;
